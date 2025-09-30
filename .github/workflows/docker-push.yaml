@@ -52,6 +52,7 @@ jobs:
             type=ref,event=branch
             type=sha,event=branch
             type=ref,event=tag
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
 
 
       - name: Build and push
