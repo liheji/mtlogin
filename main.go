@@ -144,6 +144,22 @@ func main() {
 	if os.Getenv("FEISHU_SECRET") != "" {
 		cfg.FeishuWebHookSecret = os.Getenv("FEISHU_SECRET")
 	}
+	// Ntfy 推送
+	if os.Getenv("NTFY_URL") != "" {
+		cfg.NtfyUrl = os.Getenv("NTFY_URL")
+	}
+	if os.Getenv("NTFY_TOPIC") != "" {
+		cfg.NtfyTopic = os.Getenv("NTFY_TOPIC")
+	}
+	if os.Getenv("NTFY_USER") != "" {
+		cfg.NtfyUser = os.Getenv("NTFY_USER")
+	}
+	if os.Getenv("NTFY_PASSWORD") != "" {
+		cfg.NtfyPassword = os.Getenv("NTFY_PASSWORD")
+	}
+	if os.Getenv("NTFY_TOKEN") != "" {
+		cfg.NtfyToken = os.Getenv("NTFY_TOKEN")
+	}
 	job, err := NewJobserver(cfg)
 	if err != nil {
 		panic(err)
