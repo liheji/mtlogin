@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/scjtqs2/mtlogin/lib/dingtalkrobot"
 	"github.com/scjtqs2/mtlogin/lib/feishu"
+	"github.com/scjtqs2/mtlogin/lib/ntfy"
 	"github.com/scjtqs2/mtlogin/lib/tgbot"
 	"math/rand"
 	"net/http"
@@ -50,6 +52,11 @@ type Config struct {
 	TgBotProxy                   string `yaml:"tg_bot_proxy"`                       // telegram机器人代理
 	FeishuWebHookURL             string `yaml:"feishu_web_hook_url"`                // 飞书机器人webhookURL地址
 	FeishuWebHookSecret          string `yaml:"feishu_web_hook_secret"`             // 飞书机器人的secret (安全设置)。不使用就留空。
+	NtfyUrl                      string `yaml:"ntfy_url"`                           // ntfy服务地址
+	NtfyTopic                    string `yaml:"ntfy_topic"`                         // ntfy主题
+	NtfyUser                     string `yaml:"ntfy_user"`                          // ntfy用户名
+	NtfyPassword                 string `yaml:"ntfy_password"`                      // ntfy密码
+	NtfyToken                    string `yaml:"ntfy_token"`                         // ntfy token
 }
 
 const (
@@ -166,6 +173,9 @@ func (j *Jobserver) sendErrorNotification(err error) {
 	if j.cfg.FeishuWebHookURL != "" {
 		j.sendFeishuMessage(message)
 	}
+	if j.cfg.NtfyUrl != "" && j.cfg.NtfyTopic != "" {
+		j.sendNtfyMessage(message)
+	}
 }
 
 func (j *Jobserver) sendSuccessNotification() {
@@ -193,6 +203,9 @@ func (j *Jobserver) sendSuccessNotification() {
 	}
 	if j.cfg.FeishuWebHookURL != "" {
 		j.sendFeishuMessage(message)
+	}
+	if j.cfg.NtfyUrl != "" && j.cfg.NtfyTopic != "" {
+		j.sendNtfyMessage(message)
 	}
 }
 
@@ -252,6 +265,26 @@ func (j *Jobserver) sendFeishuMessage(message string) {
 		}
 	} else {
 		log.Errorf("确实了 feishu bot的webhookurl")
+	}
+}
+
+// sendNtfyMessage 给Ntfy发送消息
+func (j *Jobserver) sendNtfyMessage(message string) {
+	if j.cfg.NtfyUrl != "" && j.cfg.NtfyTopic != "" {
+		auth := ""
+		if j.cfg.NtfyToken != "" {
+			auth = "Bearer " + j.cfg.NtfyToken
+		} else if j.cfg.NtfyUser != "" && j.cfg.NtfyPassword != "" {
+			data := fmt.Sprintf("%s:%s", j.cfg.NtfyUser, j.cfg.NtfyPassword)
+			auth = "Basic " + base64.StdEncoding.EncodeToString([]byte(data))
+		}
+		ntfy := ntfy.NewNtfy(j.cfg.NtfyUrl, j.cfg.NtfyTopic, auth)
+		err := ntfy.SendText(message)
+		if err != nil {
+			log.Errorf("ntfy 推送失败: %v", err)
+		}
+	} else {
+		log.Errorf("ntfy 缺少服务地址和主题")
 	}
 }
 
