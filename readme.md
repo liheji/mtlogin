@@ -41,11 +41,11 @@
 | TGBOT_PROXY                   | Telegram机器人接口用到的代理。如果你是国外环境，留空不用填，国内环境填`http://192.168.50.111:7890`或者`socks5://192.168.50.111:1080`这种代理                     |
 | FEISHU_WEBHOOKURL             | 飞书机器人的WebhookURL。在飞书开放平台创建机器人后，会得到一个WebhookURL。 eg: "https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-token"       |
 | FEISHU_SECRET                 | 飞书机器人的Secret。在飞书开放平台创建机器人后，会得到一个Secret。 不使用留空。                                                                              |
-| NTFY_URL                      | Ntf服务地址。不使用留空。                                                                                                              |
-| NTFY_TOPIC                    | Ntf主题。不使用留空。                                                                                                                |
-| NTFY_USER                     | Ntf用户名，需要和密码一起设置。不使用留空。                                                                                                     |
-| NTFY_PASSWORD                 | Ntf密码，需要和用户名一起设置。不使用留空。                                                                                                     |
-| NTFY_TOKEN                    | Ntf token，和用户名密码的作用一致，优先级更高。不使用留空。                                                                                          |
+| NTFY_URL                      | Ntfy服务地址。不使用留空。                                                                                                             |
+| NTFY_TOPIC                    | Ntfy主题。不使用留空。                                                                                                               |
+| NTFY_USER                     | Ntfy用户名，需要和密码一起设置。不使用留空。                                                                                                    |
+| NTFY_PASSWORD                 | Ntfy密码，需要和用户名一起设置。不使用留空。                                                                                                    |
+| NTFY_TOKEN                    | Ntfy token，与用户名密码的作用一致，优先级更高。不使用留空。                                                                                         |
 
 ## docker
 

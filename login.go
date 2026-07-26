@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
@@ -15,6 +16,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/tidwall/gjson"
 	"golang.org/x/net/http2"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -196,14 +198,17 @@ func (c *Client) check() error {
 	// options.Header.Add("Authorization", fmt.Sprintf("%s", c.token))
 	// options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
 	// res, err := client.Do(options)
-	body := url.Values{}
 	t := time.Now().UnixMilli()
-	body.Add("_timestamp", strconv.FormatInt(t, 10))
 	_sgin := sgin("POST", "/api/member/profile", t)
-	body.Add("_sgin", _sgin)
+	// 构建 multipart/form-data 请求体
+	bodyContent, contentType := multipartBody(map[string]string{
+		"_timestamp": strconv.FormatInt(t, 10),
+		"_sgin":      _sgin,
+	})
+
 	options := cycletls.Options{
 		Headers:         make(map[string]string),
-		Body:            body.Encode(),
+		Body:            bodyContent,
 		Timeout:         c.cfg.TimeOut,
 		DisableRedirect: true,
 		UserAgent:       c.ua,
@@ -214,7 +219,7 @@ func (c *Client) check() error {
 	options.Headers["User-Agent"] = c.ua
 	options.Headers["referer"] = c.cfg.Referer
 	options.Headers["origin"] = c.cfg.Referer
-	options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
+	options.Headers["Content-Type"] = contentType
 	options.Headers["Accept"] = "application/json;charset=UTF-8"
 	options.Headers["Authorization"] = fmt.Sprintf("%s", c.token)
 	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
@@ -226,12 +231,16 @@ func (c *Client) check() error {
 	c.funcState(&options)
 	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 	// 更新签名
-	body = url.Values{}
 	t = time.Now().UnixMilli()
-	body.Add("_timestamp", strconv.FormatInt(t, 10))
 	_sgin = sgin("POST", "/api/member/profile", t)
-	body.Add("_sgin", _sgin)
-	options.Body = body.Encode()
+	// 构建 multipart/form-data 请求体
+	bodyContent, contentType = multipartBody(map[string]string{
+		"_timestamp": strconv.FormatInt(t, 10),
+		"_sgin":      _sgin,
+	})
+
+	options.Headers["Content-Type"] = contentType
+	options.Body = bodyContent
 
 	res, err := c.client.Do(u, options, http.MethodPost)
 	fmt.Println("==================check start======================== ")
@@ -301,12 +310,16 @@ func (c *Client) check() error {
 		// time.Sleep(time.Second * 10)
 		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 		// 更新签名
-		body = url.Values{}
 		t = time.Now().UnixMilli()
-		body.Add("_timestamp", strconv.FormatInt(t, 10))
 		_sgin = sgin("POST", "/api/member/updateLastBrowse", t)
-		body.Add("_sgin", _sgin)
-		options.Body = body.Encode()
+		// 构建 multipart/form-data 请求体
+		bodyContent, contentType = multipartBody(map[string]string{
+			"_timestamp": strconv.FormatInt(t, 10),
+			"_sgin":      _sgin,
+		})
+
+		options.Headers["Content-Type"] = contentType
+		options.Body = bodyContent
 
 		res, err = c.client.Do(uu, options, http.MethodPost)
 		// options, _ = http.NewRequest(http.MethodPost, uu, strings.NewReader(""))
@@ -357,13 +370,22 @@ func (c *Client) funcState(options *cycletls.Options) error {
 	}
 	for u, p := range urls {
 		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
-		body := url.Values{}
 		t := time.Now().UnixMilli()
-		body.Add("_timestamp", strconv.FormatInt(t, 10))
 		uu, _ := url.Parse(u)
 		_sgin := sgin(p, uu.Path, t)
-		body.Add("_sgin", _sgin)
-		options.Body = body.Encode()
+
+		if p == http.MethodPost {
+			bodyContent, contentType := multipartBody(map[string]string{
+				"_timestamp": strconv.FormatInt(t, 10),
+				"_sgin":      _sgin,
+			})
+			options.Headers["Content-Type"] = contentType
+			options.Body = bodyContent
+		} else {
+			delete(options.Headers, "Content-Type")
+			options.Body = ""
+		}
+
 		res, err := c.client.Do(u, *options, p)
 		if err != nil {
 			return err
@@ -477,4 +499,24 @@ func sgin(method string, path string, t int64) string {
 	// 查看main.xxxxxx.js 文件的_sgin生成得到。method+apiPath+时间戳进行hmacsha1算法。
 	// return ComputeHmacSha1(fmt.Sprintf("POST&/api/login&%d", t), "HLkPcWmycL57mfJt")
 	return ComputeHmacSha1(fmt.Sprintf("%s&%s&%d", method, path, t), "HLkPcWmycL57mfJt")
+}
+
+// formUrlBody 构建application/x-www-form-urlencoded格式的请求体
+func formUrlBody(jsonData map[string]string) (string, string) {
+	body := url.Values{}
+	for k, v := range jsonData {
+		body.Add(k, v)
+	}
+	return body.Encode(), "application/x-www-form-urlencoded; charset=UTF-8"
+}
+
+// multipartBody 构建multipart/form-data格式的请求体
+func multipartBody(jsonData map[string]string) (string, string) {
+	bodyBuf := bytes.Buffer{}
+	writer := multipart.NewWriter(&bodyBuf)
+	for k, v := range jsonData {
+		_ = writer.WriteField(k, v)
+	}
+	writer.Close()
+	return bodyBuf.String(), writer.FormDataContentType()
 }
