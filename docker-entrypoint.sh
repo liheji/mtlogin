@@ -13,8 +13,8 @@ echo "---Setting umask to ${UMASK}---"
 umask ${UMASK}
 
 echo "---Taking ownership of data...---"
-chown -R ${UID}:${GID} /app /data
+chown -R ${UID}:${GID} /app
 chmod +x /app/mtlogin
 
 echo "Starting..."
-su-exec ${USER} /app/mtlogin "$@"
+exec su-exec ${USER} "$@"
